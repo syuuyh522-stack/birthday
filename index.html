@@ -265,7 +265,7 @@
   <div class="s1-content">
     <div class="big-title">🎂 이재야,<br>생일 축하해! 🎉</div>
     <div class="sub-title">특별한 날을 축하해요 ✨</div>
-    <button class="go-btn" onclick="goToCake()">케이크 보러 가기 →</button>
+    <button type="button" class="go-btn" onclick="goToCake()">케이크 보러 가기 →</button>
   </div>
 </div>
 
@@ -294,12 +294,12 @@
   <div class="controls">
     <div class="count-label" id="countLabel">초를 추가해보세요!</div>
     <div class="btn-row">
-      <button class="add-btn" onclick="addCandle()">🕯 초 추가</button>
-      <button class="remove-btn" onclick="removeCandle()">✂️ 초 빼기</button>
+      <button type="button" class="add-btn" onclick="addCandle()">🕯 초 추가</button>
+      <button type="button" class="remove-btn" onclick="removeCandle()">✂️ 초 빼기</button>
     </div>
     <div class="hint">마이크 버튼을 누른 후 후~ 하고 불어보세요!</div>
     <div class="mic-wrap">
-      <button class="mic-btn" id="micBtn" onclick="toggleMic()">🎤</button>
+      <button type="button" class="mic-btn" id="micBtn" onclick="toggleMic()">🎤</button>
       <div class="meter-bar" id="meterBar"><div class="meter-fill" id="meterFill"></div></div>
       <div class="mic-label" id="micLabel">마이크 시작</div>
     </div>
@@ -311,7 +311,7 @@
   <h2>🎉 생일 축하해! 🎉</h2>
   <p>촛불을 다 껐어요! 소원을 빌어봐요 ✨</p>
   <small>화면을 탭하면 닫혀요</small>
-  <button class="restart-btn" onclick="restartCard()">🏠 처음으로 돌아가기</button>
+  <button type="button" class="restart-btn" onclick="restartCard()">🏠 처음으로 돌아가기</button>
 </div>
 
 <script>
@@ -329,6 +329,7 @@ function goToCake() {
   document.getElementById('s1').classList.add('hidden');
   document.getElementById('s2').classList.remove('hidden');
   buildDrips();
+  requestWakeLock();
 }
 
 // Frosting drips
@@ -530,7 +531,7 @@ async function requestWakeLock() {
     }, { once: false });
   } catch(_) {}
 }
-requestWakeLock();
+// Wake lock is requested inside goToCake() to ensure user interaction has occurred first
 </script>
 </body>
 </html>
