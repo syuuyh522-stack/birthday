@@ -299,7 +299,7 @@
       <button class="add-btn" onclick="addCandle()">🕯 초 추가</button>
       <button class="remove-btn" onclick="removeCandle()">✂️ 초 빼기</button>
     </div>
-    <div class="hint">마이크 버튼을 누른 후 후~ 하고 불어보세요!</div>
+    <div class="hint">마이크 버튼을 누른 후 "후" 라고 말해보세요!</div>
     <div class="mic-wrap">
       <button class="mic-btn" id="micBtn" onclick="toggleMic()">🎤</button>
       <div class="meter-bar" id="meterBar"><div class="meter-fill" id="meterFill"></div></div>
@@ -386,35 +386,53 @@ function updateLabel() {
   else lbl.textContent = `촛불 ${lit}개 남았어요`;
 }
 
-// Mic & "후" detection via spectral centroid
-// "후" concentrates energy at ~300-700 Hz (the "oo" vowel has very low formants).
-// Regular speech spreads energy much higher — centroid typically 800-2000+ Hz.
-// Requiring 300 ms of continuous low-centroid sound filters out short speech bursts.
-const BLOW_THRESHOLD   = 18;   // minimum overall amplitude
-const HOO_CENTROID_MAX = 1200; // Hz — raised: baby "후" centroid can be up to ~1 kHz
-const HOO_DURATION_MS  = 200;  // ms — sustain long enough to rule out brief sounds
+// "후" detection using Web Speech Recognition (ko-KR)
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null;
+let micActive = false, lastBlow = 0;
 const BLOW_COOLDOWN_MS = 800;
-let audioCtx = null, analyser = null, micStream = null;
-let micActive = false, rafId = null, hooStartTime = 0, lastBlow = 0;
-let binHz = 43; // Hz per FFT bin, recalculated on mic init
 
-async function toggleMic() {
+function toggleMic() {
   if (!micActive) {
-    try {
-      micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 1024;
-      audioCtx.createMediaStreamSource(micStream).connect(analyser);
-      binHz = audioCtx.sampleRate / analyser.fftSize;
-      micActive = true;
-      document.getElementById('micBtn').classList.add('on');
-      document.getElementById('meterBar').classList.add('show');
-      document.getElementById('micLabel').textContent = '듣는 중...';
-      rafId = requestAnimationFrame(detectLoop);
-    } catch(e) {
-      document.getElementById('micLabel').textContent = '마이크 권한 필요';
+    if (!SpeechRecognition) {
+      document.getElementById('micLabel').textContent = '지원 안 됨 (Chrome/Safari 필요)';
+      return;
     }
+    recognition = new SpeechRecognition();
+    recognition.lang = 'ko-KR';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 3;
+
+    recognition.onresult = (e) => {
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        for (let j = 0; j < e.results[i].length; j++) {
+          const text = e.results[i][j].transcript;
+          const now = Date.now();
+          if (text.includes('후') && now - lastBlow > BLOW_COOLDOWN_MS) {
+            lastBlow = now;
+            extinguishOne();
+            flashMeter();
+          }
+        }
+      }
+    };
+
+    recognition.onerror = (e) => {
+      if (e.error === 'not-allowed') {
+        document.getElementById('micLabel').textContent = '마이크 권한 필요';
+        stopMic();
+      }
+    };
+
+    // Auto-restart: Speech Recognition stops after silence
+    recognition.onend = () => { if (micActive) recognition.start(); };
+
+    recognition.start();
+    micActive = true;
+    document.getElementById('micBtn').classList.add('on');
+    document.getElementById('meterBar').classList.add('show');
+    document.getElementById('micLabel').textContent = '"후" 라고 말해보세요!';
   } else {
     stopMic();
   }
@@ -422,48 +440,18 @@ async function toggleMic() {
 
 function stopMic() {
   micActive = false;
-  hooStartTime = 0;
-  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
-  if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
-  if (audioCtx) { audioCtx.close(); audioCtx = null; }
-  analyser = null;
+  if (recognition) { try { recognition.stop(); } catch(_) {} recognition = null; }
   document.getElementById('micBtn').classList.remove('on');
   document.getElementById('meterBar').classList.remove('show');
   document.getElementById('meterFill').style.width = '0%';
   document.getElementById('micLabel').textContent = '마이크 시작';
 }
 
-function detectLoop() {
-  if (!micActive) return;
-  const data = new Uint8Array(analyser.frequencyBinCount);
-  analyser.getByteFrequencyData(data);
-
-  let wSum = 0, mSum = 0, tSum = 0;
-  for (let i = 0; i < data.length; i++) {
-    tSum += data[i];
-    wSum += i * data[i];
-    mSum += data[i];
-  }
-  const avg      = tSum / data.length;
-  // spectral centroid in Hz — the "centre of gravity" of the frequency spectrum
-  const centroid = mSum > 0 ? (wSum / mSum) * binHz : 9999;
-
-  document.getElementById('meterFill').style.width = Math.min(100, avg * 8) + '%';
-
-  // "후": loud AND centroid very low (energy bunched in bass/low-mid only)
-  const isHoo = avg >= BLOW_THRESHOLD && centroid < HOO_CENTROID_MAX;
-
-  const now = Date.now();
-  if (isHoo) {
-    if (hooStartTime === 0) hooStartTime = now;
-    if (now - hooStartTime >= HOO_DURATION_MS && now - lastBlow > BLOW_COOLDOWN_MS) {
-      lastBlow = now; hooStartTime = 0;
-      extinguishOne();
-    }
-  } else {
-    hooStartTime = 0;
-  }
-  rafId = requestAnimationFrame(detectLoop);
+function flashMeter() {
+  const fill = document.getElementById('meterFill');
+  fill.style.transition = 'none';
+  fill.style.width = '100%';
+  setTimeout(() => { fill.style.transition = 'width .5s'; fill.style.width = '0%'; }, 300);
 }
 
 function extinguishOne() {
