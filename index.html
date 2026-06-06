@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>이재야, 생일 축하해!</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      background: #0d0520;
+    }
+
+    /* ── Screens ── */
+    .screen {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity .8s ease, transform .8s ease;
+    }
+    .screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(.95);
+    }
+
+    /* ── Screen 1 ── */
+    #s1 { background: radial-gradient(ellipse at 50% 40%, #2a0e61 0%, #0d0520 70%); }
+
+    .stars-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    .star {
+      position: absolute;
+      background: #fff;
+      border-radius: 50%;
+      animation: twinkle var(--d, 2s) var(--dl, 0s) infinite;
+    }
+    @keyframes twinkle {
+      0%,100% { opacity: 0; transform: scale(.2); }
+      50%      { opacity: 1; transform: scale(1); }
+    }
+
+    .s1-content { text-align: center; z-index: 1; }
+
+    .big-title {
+      font-size: clamp(2.2rem, 7vw, 4.5rem);
+      color: #fff;
+      line-height: 1.2;
+      animation: fadeUp .9s ease forwards;
+      text-shadow: 0 0 40px rgba(200,130,255,.8), 0 0 80px rgba(200,130,255,.4);
+    }
+    .sub-title {
+      margin-top: .8rem;
+      font-size: clamp(1rem, 3vw, 1.6rem);
+      color: #ffd700;
+      opacity: 0;
+      animation: fadeUp .9s ease .5s forwards;
+    }
+    .go-btn {
+      margin-top: 2.8rem;
+      padding: .9rem 2.8rem;
+      font-size: 1.1rem;
+      background: linear-gradient(135deg, #b44fff, #ff6bbd);
+      color: #fff;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      opacity: 0;
+      animation: fadeUp .9s ease 1s forwards;
+      transition: transform .2s, box-shadow .2s;
+      box-shadow: 0 4px 20px rgba(180,80,255,.5);
+    }
+    .go-btn:hover { transform: scale(1.07); box-shadow: 0 8px 30px rgba(180,80,255,.7); }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(28px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Screen 2 ── */
+    #s2 { background: radial-gradient(ellipse at 50% 60%, #0e2450 0%, #0d0520 70%); }
+
+    /* Cake */
+    .cake-wrap {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      user-select: none;
+    }
+
+    .cake-stack {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Candle zone sits on top of cake */
+    .candle-zone {
+      position: relative;
+      width: 230px;
+      min-height: 80px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 8px;
+      padding-bottom: 6px;
+    }
+
+    /* Cake layers */
+    .layer {
+      border-radius: 12px;
+      position: relative;
+      box-shadow: 0 6px 18px rgba(0,0,0,.4);
+    }
+    .layer::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: linear-gradient(to bottom, rgba(255,255,255,.25) 0%, transparent 60%);
+    }
+    .l1 { width: 220px; height: 70px; background: linear-gradient(135deg, #ff9a9e, #fad0c4); }
+    .l2 { width: 260px; height: 80px; background: linear-gradient(135deg, #a18cd1, #fbc2eb); }
+    .l3 { width: 300px; height: 90px; background: linear-gradient(135deg, #ffecd2, #fcb69f); }
+
+    /* Cake plate */
+    .plate {
+      width: 320px;
+      height: 14px;
+      background: linear-gradient(to bottom, #e8d5b0, #c9a96e);
+      border-radius: 50%;
+      box-shadow: 0 6px 14px rgba(0,0,0,.4);
+    }
+
+    /* Candle */
+    .candle {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .flame-wrap {
+      position: relative;
+      width: 14px;
+      height: 26px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .flame {
+      width: 13px;
+      height: 22px;
+      background: radial-gradient(ellipse at 50% 70%, #fff 0%, #ffd200 40%, #ff6500 85%);
+      border-radius: 50% 50% 35% 35%;
+      animation: flicker .4s infinite alternate ease-in-out;
+      transform-origin: bottom center;
+      position: absolute;
+      bottom: 0;
+      filter: drop-shadow(0 0 6px #ffaa00);
+    }
+    .flame.extinguished { display: none; }
+    .smoke-puff {
+      position: absolute;
+      bottom: 0;
+      width: 5px;
+      height: 0;
+      background: rgba(220,220,220,.6);
+      border-radius: 50%;
+      display: none;
+    }
+    .smoke-puff.rising {
+      display: block;
+      animation: smokeUp 1.2s ease-out forwards;
+    }
+    @keyframes flicker {
+      0%   { transform: scaleX(1) rotate(-4deg) scaleY(1); }
+      100% { transform: scaleX(.78) rotate(4deg) scaleY(1.08); }
+    }
+    @keyframes smokeUp {
+      0%   { height: 0; opacity: .7; transform: translateY(0) scaleX(1); }
+      60%  { height: 24px; opacity: .5; transform: translateY(-20px) scaleX(1.5); }
+      100% { height: 30px; opacity: 0; transform: translateY(-40px) scaleX(2.5); }
+    }
+
+    .candle-body {
+      width: 13px;
+      height: 48px;
+      border-radius: 4px;
+      box-shadow: inset -2px 0 4px rgba(0,0,0,.2);
+    }
+    .wick {
+      width: 2px;
+      height: 5px;
+      background: #333;
+      margin-bottom: -1px;
+      border-radius: 1px;
+    }
+
+    /* Controls */
+    .controls {
+      margin-top: 1.2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .7rem;
+      z-index: 1;
+    }
+    .count-label {
+      color: #ffd700;
+      font-size: 1rem;
+      min-height: 1.4em;
+    }
+    .add-btn {
+      padding: .65rem 2rem;
+      background: rgba(255,255,255,.12);
+      color: #fff;
+      border: 1.5px solid rgba(255,255,255,.35);
+      border-radius: 50px;
+      cursor: pointer;
+      font-size: .95rem;
+      backdrop-filter: blur(8px);
+      transition: background .2s, transform .2s;
+    }
+    .add-btn:hover { background: rgba(255,255,255,.22); transform: scale(1.05); }
+
+    .hint {
+      color: rgba(255,255,255,.65);
+      font-size: .82rem;
+      text-align: center;
+      max-width: 280px;
+    }
+
+    /* Mic */
+    .mic-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .6rem;
+      margin-top: .4rem;
+    }
+    .mic-btn {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      font-size: 1.9rem;
+      background: linear-gradient(135deg, #b44fff, #ff6bbd);
+      box-shadow: 0 0 22px rgba(180,80,255,.55);
+      transition: transform .2s, box-shadow .2s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .mic-btn:hover { transform: scale(1.1); }
+    .mic-btn.on {
+      animation: pulse .8s infinite;
+      background: linear-gradient(135deg, #ff3366, #ff8c00);
+      box-shadow: 0 0 30px rgba(255,50,100,.7);
+    }
+    @keyframes pulse {
+      0%,100% { transform: scale(1); }
+      50%      { transform: scale(1.12); }
+    }
+
+    .meter-bar {
+      width: 200px;
+      height: 8px;
+      background: rgba(255,255,255,.15);
+      border-radius: 4px;
+      overflow: hidden;
+      display: none;
+    }
+    .meter-bar.show { display: block; }
+    .meter-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #00ff99, #ffd700, #ff4444);
+      border-radius: 4px;
+      transition: width .08s linear;
+    }
+    .mic-label {
+      color: rgba(255,255,255,.7);
+      font-size: .82rem;
+    }
+
+    /* Celebration overlay */
+    #celebration {
+      position: fixed;
+      inset: 0;
+      background: rgba(5,1,20,.85);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .8s;
+    }
+    #celebration.show { opacity: 1; pointer-events: all; }
+    #celebration h2 {
+      font-size: clamp(1.8rem, 6vw, 3.5rem);
+      color: #ffd700;
+      text-align: center;
+      animation: bounce .6s infinite alternate;
+      text-shadow: 0 0 30px rgba(255,210,0,.6);
+    }
+    #celebration p {
+      margin-top: 1rem;
+      color: #fff;
+      font-size: 1.2rem;
+    }
+    #celebration small {
+      margin-top: 2rem;
+      color: rgba(255,255,255,.45);
+      font-size: .8rem;
+    }
+    @keyframes bounce { from { transform: scale(1); } to { transform: scale(1.04); } }
+
+    /* Confetti */
+    .confetti-piece {
+      position: fixed;
+      top: -12px;
+      width: 10px;
+      height: 10px;
+      z-index: 1000;
+      border-radius: var(--br, 0);
+      animation: confettiFall var(--dur, 2s) linear var(--dl2, 0s) forwards;
+    }
+    @keyframes confettiFall {
+      0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(105vh) rotate(var(--rot, 720deg)); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Screen 1 ── -->
+<div class="screen" id="s1">
+  <div class="stars-layer" id="starsLayer"></div>
+  <div class="s1-content">
+    <h1 class="big-title">이재야,<br>생일 축하해! 🎉</h1>
+    <p class="sub-title">특별한 케이크가 기다리고 있어 ✨</p>
+    <button class="go-btn" onclick="showScreen2()">케이크 보러가기 →</button>
+  </div>
+</div>
+
+<!-- ── Screen 2 ── -->
+<div class="screen hidden" id="s2">
+  <div class="cake-wrap">
+    <div class="cake-stack">
+      <div class="candle-zone" id="candleZone"></div>
+      <div class="layer l1"></div>
+      <div class="layer l2"></div>
+      <div class="layer l3"></div>
+    </div>
+    <div class="plate"></div>
+
+    <div class="controls">
+      <div class="count-label" id="countLabel">초를 꽂아보세요!</div>
+      <button class="add-btn" onclick="addCandle()">🕯 초 추가하기</button>
+      <p class="hint">원하는 만큼 초를 꽂고, 마이크에 후~ 불어보세요!</p>
+      <div class="mic-wrap">
+        <button class="mic-btn" id="micBtn" onclick="toggleMic()">🎤</button>
+        <div class="meter-bar" id="meterBar"><div class="meter-fill" id="meterFill"></div></div>
+        <div class="mic-label" id="micLabel">마이크 버튼을 눌러 시작</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Celebration ── -->
+<div id="celebration">
+  <h2>🎂 소원이 이루어지길! 🎂</h2>
+  <p>생일 축하해, 이재야! 🎉</p>
+  <small>화면을 클릭하면 닫혀요</small>
+</div>
+
+<script>
+/* ── Stars ── */
+const starsLayer = document.getElementById('starsLayer');
+for (let i = 0; i < 120; i++) {
+  const s = document.createElement('div');
+  s.className = 'star';
+  const size = Math.random() * 3 + 1;
+  s.style.cssText = `
+    width:${size}px; height:${size}px;
+    left:${Math.random()*100}%; top:${Math.random()*100}%;
+    --d:${(Math.random()*2+1).toFixed(1)}s;
+    --dl:${(Math.random()*3).toFixed(1)}s;
+  `;
+  starsLayer.appendChild(s);
+}
+
+/* ── Screen transition ── */
+function showScreen2() {
+  document.getElementById('s1').classList.add('hidden');
+  document.getElementById('s2').classList.remove('hidden');
+}
+
+/* ── Candle colors ── */
+const CANDLE_COLORS = [
+  ['#ff6b6b','#ff9e9e'], ['#6b9fff','#9ec3ff'], ['#6bffb8','#9effd3'],
+  ['#ff6bff','#ff9eff'], ['#ffd96b','#ffe89e'], ['#ff9a6b','#ffbb9e'],
+  ['#c36bff','#d99eff'],
+];
+let candleCount = 0;
+
+function addCandle() {
+  candleCount++;
+  const zone = document.getElementById('candleZone');
+  const [c1, c2] = CANDLE_COLORS[(candleCount - 1) % CANDLE_COLORS.length];
+
+  const el = document.createElement('div');
+  el.className = 'candle';
+  el.dataset.lit = 'true';
+  el.innerHTML = `
+    <div class="flame-wrap">
+      <div class="flame"></div>
+      <div class="smoke-puff"></div>
+    </div>
+    <div class="wick"></div>
+    <div class="candle-body" style="background:linear-gradient(to right,${c1},${c2})"></div>
+  `;
+  zone.appendChild(el);
+  updateLabel();
+}
+
+function updateLabel() {
+  const lit = document.querySelectorAll('.candle[data-lit="true"]').length;
+  const total = candleCount;
+  if (total === 0) {
+    document.getElementById('countLabel').textContent = '초를 꽂아보세요!';
+  } else if (lit === 0) {
+    document.getElementById('countLabel').textContent = `${total}개 모두 꺼졌어요! 🎉`;
+  } else {
+    document.getElementById('countLabel').textContent = `초 ${total}개 (${lit}개 켜짐)`;
+  }
+}
+
+/* ── Mic / blow detection ── */
+let listening = false;
+let audioCtx = null;
+let analyser = null;
+let rafId = null;
+let blowFrames = 0;
+const BLOW_THRESHOLD = 55;
+const BLOW_FRAMES_NEEDED = 4;
+let lastBlowTime = 0;
+const BLOW_COOLDOWN_MS = 350;
+
+async function toggleMic() {
+  if (listening) { stopMic(); return; }
+  if (candleCount === 0) { alert('초를 먼저 꽂아주세요!'); return; }
+  const litCount = document.querySelectorAll('.candle[data-lit="true"]').length;
+  if (litCount === 0) { alert('모든 초가 이미 꺼졌어요!'); return; }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 512;
+    analyser.smoothingTimeConstant = 0.4;
+    audioCtx.createMediaStreamSource(stream).connect(analyser);
+
+    listening = true;
+    document.getElementById('micBtn').classList.add('on');
+    document.getElementById('micLabel').textContent = '후~ 불어보세요!';
+    document.getElementById('meterBar').classList.add('show');
+    detectLoop(new Uint8Array(analyser.frequencyBinCount));
+  } catch {
+    alert('마이크 권한이 필요해요. 브라우저 설정에서 허용해 주세요.');
+  }
+}
+
+function stopMic() {
+  listening = false;
+  cancelAnimationFrame(rafId);
+  if (audioCtx) { audioCtx.close(); audioCtx = null; }
+  document.getElementById('micBtn').classList.remove('on');
+  document.getElementById('micLabel').textContent = '마이크 버튼을 눌러 시작';
+  document.getElementById('meterBar').classList.remove('show');
+  document.getElementById('meterFill').style.width = '0%';
+}
+
+function detectLoop(data) {
+  if (!listening) return;
+  analyser.getByteFrequencyData(data);
+
+  let sum = 0;
+  for (let i = 0; i < data.length; i++) sum += data[i];
+  const avg = sum / data.length;
+
+  const pct = Math.min(100, avg / 255 * 100 * 3.5);
+  document.getElementById('meterFill').style.width = pct + '%';
+
+  if (avg > BLOW_THRESHOLD) {
+    blowFrames++;
+    if (blowFrames >= BLOW_FRAMES_NEEDED) {
+      const now = Date.now();
+      if (now - lastBlowTime > BLOW_COOLDOWN_MS) {
+        lastBlowTime = now;
+        blowOneCandle();
+      }
+    }
+  } else {
+    blowFrames = Math.max(0, blowFrames - 1);
+  }
+
+  rafId = requestAnimationFrame(() => detectLoop(data));
+}
+
+function blowOneCandle() {
+  const lit = [...document.querySelectorAll('.candle[data-lit="true"]')];
+  if (lit.length === 0) { stopMic(); showCelebration(); return; }
+
+  const target = lit[Math.floor(Math.random() * lit.length)];
+  extinguish(target);
+  updateLabel();
+
+  if (lit.length === 1) {
+    setTimeout(() => { stopMic(); showCelebration(); }, 600);
+  }
+}
+
+function extinguish(candle) {
+  candle.dataset.lit = 'false';
+  const flame = candle.querySelector('.flame');
+  const smoke = candle.querySelector('.smoke-puff');
+  flame.classList.add('extinguished');
+  smoke.classList.add('rising');
+  setTimeout(() => smoke.classList.remove('rising'), 1300);
+}
+
+/* ── Celebration ── */
+function showCelebration() {
+  document.getElementById('celebration').classList.add('show');
+  launchConfetti();
+}
+
+document.getElementById('celebration').addEventListener('click', function () {
+  this.classList.remove('show');
+});
+
+const CONF_COLORS = ['#ff6bbd','#ffd700','#6bffb8','#6b9fff','#ff6b6b','#c36bff','#ff9a6b'];
+
+function launchConfetti() {
+  for (let i = 0; i < 80; i++) {
+    setTimeout(() => {
+      const d = document.createElement('div');
+      d.className = 'confetti-piece';
+      const isCircle = Math.random() > .5;
+      d.style.cssText = `
+        left:${Math.random()*100}%;
+        background:${CONF_COLORS[Math.floor(Math.random()*CONF_COLORS.length)]};
+        --br:${isCircle ? '50%' : '2px'};
+        --dur:${(Math.random()*1.5+1.5).toFixed(1)}s;
+        --dl2:${(Math.random()*.6).toFixed(2)}s;
+        --rot:${Math.random() > .5 ? '' : '-'}${Math.floor(Math.random()*720+360)}deg;
+        width:${Math.random()*8+6}px; height:${Math.random()*8+6}px;
+      `;
+      document.body.appendChild(d);
+      setTimeout(() => d.remove(), 4000);
+    }, i * 40);
+  }
+}
+</script>
+</body>
+</html>
