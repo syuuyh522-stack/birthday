@@ -2,11 +2,11 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>이재야, 생일 축하해!</title>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: "Segoe UI", sans-serif; height: 100vh; overflow: hidden; background: #0d0520; }
+    body { font-family: "Segoe UI", sans-serif; height: 100vh; overflow: hidden; background: #0d0520; touch-action: manipulation; }
 
     .screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity .8s ease, transform .8s ease; }
     .screen.hidden { opacity: 0; pointer-events: none; transform: scale(.95); }
@@ -515,6 +515,22 @@ function restartCard() {
   document.getElementById('s2').classList.add('hidden');
   document.getElementById('s1').classList.remove('hidden');
 }
+
+// Keep screen awake while the page is open
+let wakeLock = null;
+async function requestWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    // Re-acquire if released (e.g. tab becomes hidden then visible again)
+    document.addEventListener('visibilitychange', async () => {
+      if (document.visibilityState === 'visible') {
+        try { wakeLock = await navigator.wakeLock.request('screen'); } catch(_) {}
+      }
+    }, { once: false });
+  } catch(_) {}
+}
+requestWakeLock();
 </script>
 </body>
 </html>
