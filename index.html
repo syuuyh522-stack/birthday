@@ -382,12 +382,16 @@ function updateLabel() {
   else lbl.textContent = `촛불 ${lit}개 남았어요`;
 }
 
-// Mic & blow detection
-const BLOW_THRESHOLD = 18;
+// Mic & "후" detection
+// "후" has strong low-frequency energy (the "oo" vowel resonates below ~1 kHz)
+// and weak high-frequency energy — unlike clapping, speech, or other sounds.
+const BLOW_THRESHOLD = 18;       // minimum overall amplitude
+const LOW_HIGH_RATIO = 1.5;      // low-freq avg must exceed high-freq avg × this
 const BLOW_FRAMES_NEEDED = 2;
 const BLOW_COOLDOWN_MS = 500;
 let audioCtx = null, analyser = null, micStream = null;
 let blowFrames = 0, lastBlow = 0, micActive = false, rafId = null;
+let lowCutBin = 8, highStartBin = 24; // recalculated on mic init
 
 async function toggleMic() {
   if (!micActive) {
@@ -397,6 +401,10 @@ async function toggleMic() {
       analyser = audioCtx.createAnalyser();
       analyser.fftSize = 256;
       audioCtx.createMediaStreamSource(micStream).connect(analyser);
+      // Compute bin boundaries from actual sample rate
+      const binHz = audioCtx.sampleRate / analyser.fftSize;
+      lowCutBin   = Math.ceil(1000 / binHz);  // up to 1 kHz  → "후" vowel zone
+      highStartBin = Math.ceil(3500 / binHz); // 3.5 kHz+     → consonants/noise zone
       micActive = true;
       document.getElementById('micBtn').classList.add('on');
       document.getElementById('meterBar').classList.add('show');
@@ -426,10 +434,24 @@ function detectLoop() {
   if (!micActive) return;
   const data = new Uint8Array(analyser.frequencyBinCount);
   analyser.getByteFrequencyData(data);
-  const avg = data.reduce((a, b) => a + b, 0) / data.length;
+
+  let totalSum = 0, lowSum = 0, highSum = 0;
+  for (let i = 0; i < data.length; i++) {
+    totalSum += data[i];
+    if (i < lowCutBin) lowSum += data[i];
+    if (i >= highStartBin) highSum += data[i];
+  }
+  const avg    = totalSum / data.length;
+  const lowAvg  = lowSum  / lowCutBin;
+  const highAvg = highSum / (data.length - highStartBin);
+
   document.getElementById('meterFill').style.width = Math.min(100, avg * 8) + '%';
+
+  // Passes only when loud enough AND low frequencies dominate (= "후" pattern)
+  const isHoo = avg >= BLOW_THRESHOLD && lowAvg > highAvg * LOW_HIGH_RATIO;
+
   const now = Date.now();
-  if (avg >= BLOW_THRESHOLD) {
+  if (isHoo) {
     blowFrames++;
     if (blowFrames >= BLOW_FRAMES_NEEDED && now - lastBlow > BLOW_COOLDOWN_MS) {
       lastBlow = now; blowFrames = 0;
