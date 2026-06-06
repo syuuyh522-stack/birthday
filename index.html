@@ -137,18 +137,18 @@
 
     /* ── Cake ── */
     .cake-graphic {
-      position: relative;
       display: flex;
       flex-direction: column;
       align-items: center;
       margin-top: -6px;
+      filter: drop-shadow(0 16px 32px rgba(0,0,0,.38));
     }
 
     /* Frosting */
     .frosting-wrap {
       position: relative;
-      width: 280px;
-      height: 36px;
+      width: 290px;
+      height: 52px;
       z-index: 3;
       overflow: visible;
     }
@@ -157,71 +157,73 @@
       top: 0; left: 0;
       width: 100%;
       height: 100%;
-      background: linear-gradient(to bottom, #fff8fc, #ffe8f4);
+      background: linear-gradient(180deg, #ffffff 0%, #fff0f8 100%);
       border-radius: 50% 50% 0 0 / 100% 100% 0 0;
-      box-shadow: 0 -3px 10px rgba(255,160,200,.3);
+      box-shadow: 0 -4px 14px rgba(255,140,190,.25), inset 0 -6px 10px rgba(255,180,210,.12);
     }
     .drip {
       position: absolute;
       bottom: 0;
-      width: 16px;
-      background: linear-gradient(to bottom, #ffe8f4, #ffcce8);
-      border-radius: 0 0 50% 50%;
+      background: linear-gradient(180deg, #fff0f8 0%, #ffadd1 55%, #ff80b8 100%);
+      border-radius: 0 0 60% 60%;
       transform: translateY(100%);
+      box-shadow: 0 3px 6px rgba(255,100,160,.18);
     }
 
     /* Cake body */
     .cake-body {
-      width: 280px;
-      height: 110px;
-      background: linear-gradient(100deg, #f8e4d0 0%, #f5d3b8 45%, #f0c5a0 100%);
+      width: 290px;
+      height: 120px;
+      background: linear-gradient(170deg, #fef4ec 0%, #fbe6d4 35%, #f8d8be 68%, #f4caab 100%);
       position: relative;
       z-index: 2;
       overflow: hidden;
     }
-    /* Subtle side shadows for depth */
     .cake-body::before {
       content: '';
       position: absolute;
       inset: 0;
-      background: linear-gradient(to right, rgba(0,0,0,.07) 0%, transparent 15%, transparent 85%, rgba(0,0,0,.07) 100%);
+      background: linear-gradient(to right,
+        rgba(0,0,0,.08) 0%, transparent 14%,
+        transparent 86%, rgba(0,0,0,.08) 100%);
       pointer-events: none;
     }
-    /* Cream layer stripe */
-    .cake-body::after {
-      content: '';
+    /* Cream filling stripe */
+    .cream-stripe {
       position: absolute;
-      top: 36px; left: 0; right: 0;
-      height: 10px;
-      background: rgba(255,255,255,.4);
-      box-shadow: 0 2px 4px rgba(0,0,0,.06);
+      top: 42px; left: 0; right: 0;
+      height: 20px;
+      background: linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(255,238,248,.75) 100%);
+      box-shadow: 0 2px 8px rgba(255,120,170,.14), 0 -1px 6px rgba(255,120,170,.1);
     }
     .cake-deco {
       position: absolute;
-      font-size: 1.3rem;
+      font-size: 1.5rem;
       line-height: 1;
+      filter: drop-shadow(0 2px 3px rgba(0,0,0,.18));
     }
 
     /* Cake bottom edge */
     .cake-bottom {
-      width: 280px;
-      height: 14px;
-      background: linear-gradient(to bottom, #e8b080, #c88850);
-      border-radius: 0 0 6px 6px;
+      width: 290px;
+      height: 18px;
+      background: linear-gradient(180deg, #e8a870 0%, #c07838 100%);
+      border-radius: 0 0 10px 10px;
       z-index: 2;
       position: relative;
+      box-shadow: inset 0 3px 6px rgba(255,200,150,.3);
     }
 
     /* Plate */
     .cake-plate {
-      width: 320px;
-      height: 18px;
-      background: linear-gradient(to bottom, #f0ede8, #d4cfc8);
+      width: 348px;
+      height: 22px;
+      background: linear-gradient(180deg, #f8f5f0 0%, #e0d8d0 100%);
       border-radius: 50%;
-      box-shadow: 0 8px 24px rgba(0,0,0,.45);
+      box-shadow: 0 10px 28px rgba(0,0,0,.42), inset 0 2px 0 rgba(255,255,255,.8);
       z-index: 1;
       position: relative;
-      margin-top: -2px;
+      margin-top: -5px;
     }
 
     /* ── Controls ── */
@@ -282,6 +284,7 @@
       <div class="frosting-blob"></div>
     </div>
     <div class="cake-body">
+      <div class="cream-stripe"></div>
       <span class="cake-deco" style="top:12px;left:18px">🍓</span>
       <span class="cake-deco" style="top:55px;left:14px">🫐</span>
       <span class="cake-deco" style="top:12px;left:90px">🫐</span>
@@ -338,12 +341,17 @@ function goToCake() {
 // Frosting drips
 function buildDrips() {
   const wrap = document.getElementById('frostingWrap');
-  const positions = [18, 46, 74, 100, 128, 155, 182, 210, 236, 260];
-  positions.forEach(x => {
+  wrap.querySelectorAll('.drip').forEach(d => d.remove());
+  const drips = [
+    {x:6,w:13}, {x:28,w:17}, {x:52,w:11}, {x:76,w:20},
+    {x:102,w:14}, {x:128,w:18}, {x:154,w:12}, {x:180,w:20},
+    {x:206,w:14}, {x:232,w:17}, {x:257,w:11}
+  ];
+  drips.forEach(({x, w}) => {
     const d = document.createElement('div');
     d.className = 'drip';
-    const h = Math.floor(Math.random() * 12 + 14);
-    d.style.cssText = `left:${x}px;height:${h}px;`;
+    const h = Math.floor(Math.random() * 14 + 16);
+    d.style.cssText = `left:${x}px;width:${w}px;height:${h}px;`;
     wrap.appendChild(d);
   });
 }
