@@ -248,7 +248,9 @@
     #celebration.show { opacity:1; pointer-events:all; }
     #celebration h2 { font-size:clamp(1.8rem,6vw,3.5rem); color:#ffd700; text-align:center; animation:bounce .6s infinite alternate; text-shadow:0 0 30px rgba(255,210,0,.6); }
     #celebration p { margin-top:1rem; color:#fff; font-size:1.2rem; }
-    #celebration small { margin-top:2rem; color:rgba(255,255,255,.45); font-size:.8rem; }
+    #celebration small { margin-top:1rem; color:rgba(255,255,255,.45); font-size:.8rem; }
+    .restart-btn { margin-top:1.6rem; padding:.7rem 2rem; font-size:1rem; background:linear-gradient(135deg,#b44fff,#ff6bbd); color:#fff; border:none; border-radius:50px; cursor:pointer; box-shadow:0 4px 20px rgba(180,80,255,.5); transition:transform .2s,box-shadow .2s; }
+    .restart-btn:hover { transform:scale(1.07); box-shadow:0 8px 30px rgba(180,80,255,.7); }
     @keyframes bounce { from{transform:scale(1);} to{transform:scale(1.05);} }
 
     .confetti-piece { position:fixed; top:-12px; width:10px; height:10px; z-index:1000; border-radius:var(--br,0); animation:confettiFall var(--dur,2s) linear var(--dl2,0s) forwards; }
@@ -309,6 +311,7 @@
   <h2>🎉 생일 축하해! 🎉</h2>
   <p>촛불을 다 껐어요! 소원을 빌어봐요 ✨</p>
   <small>화면을 탭하면 닫혀요</small>
+  <button class="restart-btn" onclick="restartCard()">🏠 처음으로 돌아가기</button>
 </div>
 
 <script>
@@ -471,9 +474,25 @@ function launchConfetti() {
   }
 }
 
-document.getElementById('celebration').addEventListener('click', () => {
+document.getElementById('celebration').addEventListener('click', (e) => {
+  if (e.target.classList.contains('restart-btn')) return;
   document.getElementById('celebration').classList.remove('show');
 });
+
+function restartCard() {
+  document.getElementById('celebration').classList.remove('show');
+  stopMic();
+  // Clear candles
+  candles = [];
+  document.getElementById('candleZone').innerHTML = '';
+  // Clear drips
+  const wrap = document.getElementById('frostingWrap');
+  wrap.querySelectorAll('.drip').forEach(d => d.remove());
+  updateLabel();
+  // Switch screens
+  document.getElementById('s2').classList.add('hidden');
+  document.getElementById('s1').classList.remove('hidden');
+}
 </script>
 </body>
 </html>
