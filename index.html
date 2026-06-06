@@ -302,7 +302,7 @@
       <button class="add-btn" onclick="addCandle()">🕯 초 추가</button>
       <button class="remove-btn" onclick="removeCandle()">✂️ 초 빼기</button>
     </div>
-    <div class="hint">마이크 버튼을 누른 후 "후" 라고 말해보세요!</div>
+    <div class="hint">마이크 버튼을 누른 후 촛불에 불어보세요!</div>
     <div class="mic-wrap">
       <button class="mic-btn" id="micBtn" onclick="toggleMic()">🎤</button>
       <div class="meter-bar" id="meterBar"><div class="meter-fill" id="meterFill"></div></div>
@@ -394,91 +394,87 @@ function updateLabel() {
   else lbl.textContent = `촛불 ${lit}개 남았어요`;
 }
 
-// "후" detection using Web Speech Recognition (ko-KR)
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-let recognition = null;
-let micActive = false, lastBlow = 0, labelTimer = null;
-const BLOW_COOLDOWN_MS = 800;
-
-// syllables that sound like "후" — broadened to catch baby pronunciation variations
-const HOO_PATTERNS = ['후', '훅', '훠', '허', '호', '풍', '부', '푸'];
-function isHoo(text) { return HOO_PATTERNS.some(p => text.includes(p)); }
+// Blow detection via AudioContext — one-time mic permission, no network needed
+let audioCtx = null, analyser = null, micStream = null, animId = null;
+let micActive = false, lastBlow = 0, blowStart = 0, labelTimer = null;
+const BLOW_COOLDOWN = 1500;  // ms between blows
+const BLOW_THRESHOLD = 26;   // avg energy in low freq bins (0-255)
+const BLOW_DURATION = 110;   // ms to sustain for it to count
 
 function setLabel(txt, resetMs) {
   document.getElementById('micLabel').textContent = txt;
   clearTimeout(labelTimer);
   if (resetMs) labelTimer = setTimeout(() => {
-    if (micActive) document.getElementById('micLabel').textContent = '"후" 라고 말해보세요!';
+    if (micActive) document.getElementById('micLabel').textContent = '불어보세요!';
   }, resetMs);
 }
 
 function toggleMic() {
-  if (!micActive) {
-    if (!SpeechRecognition) {
-      setLabel('Chrome 또는 Safari에서 열어주세요');
-      return;
-    }
-    recognition = new SpeechRecognition();
-    recognition.lang = 'ko-KR';
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 5;
+  if (!micActive) startMic(); else stopMic();
+}
 
-    recognition.onresult = (e) => {
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        for (let j = 0; j < e.results[i].length; j++) {
-          const text = e.results[i][j].transcript.trim();
-          // Show what was heard so we can debug
-          setLabel(`들림: "${text}"`, 2000);
-          const now = Date.now();
-          if (isHoo(text) && now - lastBlow > BLOW_COOLDOWN_MS) {
-            lastBlow = now;
-            extinguishOne();
-            flashMeter();
-          }
-        }
-      }
-    };
-
-    recognition.onerror = (e) => {
-      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-        setLabel('마이크 권한 필요');
-        stopMic();
-      } else if (e.error === 'network') {
-        setLabel('네트워크 오류 — 재시도 중...');
-      } else if (e.error === 'audio-capture') {
-        setLabel('마이크를 찾을 수 없어요');
-        stopMic();
-      }
-      // no-speech / aborted are harmless; onend will restart
-    };
-
-    // Restart after each utterance (Safari / Android stop after silence)
-    let restartCount = 0;
-    recognition.onend = () => {
-      if (!micActive) return;
-      restartCount++;
-      // Back-off to avoid tight loop: 150ms → 300ms → 600ms → cap 1s
-      const delay = Math.min(150 * Math.pow(2, restartCount - 1), 1000);
-      setTimeout(() => {
-        if (!micActive) return;
-        try { recognition.start(); restartCount = 0; } catch(_) {}
-      }, delay);
-    };
-
-    recognition.start();
-    micActive = true;
-    document.getElementById('micBtn').classList.add('on');
-    document.getElementById('meterBar').classList.add('show');
-    setLabel('"후" 라고 말해보세요!');
-  } else {
-    stopMic();
+async function startMic() {
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+  } catch(err) {
+    document.getElementById('micLabel').textContent =
+      err.name === 'NotAllowedError' ? '마이크 권한 필요' : '마이크 오류';
+    return;
   }
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 256;
+  analyser.smoothingTimeConstant = 0.25;
+  audioCtx.createMediaStreamSource(micStream).connect(analyser);
+
+  micActive = true;
+  document.getElementById('micBtn').classList.add('on');
+  document.getElementById('meterBar').classList.add('show');
+  setLabel('불어보세요!');
+  detectLoop();
+}
+
+function detectLoop() {
+  if (!micActive) return;
+  const data = new Uint8Array(analyser.frequencyBinCount); // 128 bins
+  analyser.getByteFrequencyData(data);
+
+  // fftSize=256 → binWidth ≈ 172Hz (44100Hz sample rate)
+  // bins 0-2: ~0–516Hz (puff/breath energy)
+  // bins 3-14: ~516–2580Hz (speech formants)
+  const low = (data[0] + data[1] + data[2]) / 3;
+  const mid = data.slice(3, 15).reduce((a, b) => a + b, 0) / 12;
+
+  // Meter: amplify so even soft sounds are visible
+  document.getElementById('meterFill').style.width = Math.min(100, (low / 255) * 350) + '%';
+
+  const now = Date.now();
+  // Blow = strong low-freq energy AND low dominates mid (not speech)
+  const isBlow = low > BLOW_THRESHOLD && low >= mid * 1.05;
+
+  if (isBlow) {
+    if (!blowStart) blowStart = now;
+    if (now - blowStart >= BLOW_DURATION && now - lastBlow > BLOW_COOLDOWN) {
+      lastBlow = now;
+      blowStart = 0;
+      extinguishOne();
+      flashMeter();
+      setLabel('🕯 꺼졌어요!', 1200);
+    }
+  } else {
+    blowStart = 0;
+  }
+
+  animId = requestAnimationFrame(detectLoop);
 }
 
 function stopMic() {
   micActive = false;
-  if (recognition) { try { recognition.stop(); } catch(_) {} recognition = null; }
+  blowStart = 0;
+  if (animId) { cancelAnimationFrame(animId); animId = null; }
+  if (analyser) { try { analyser.disconnect(); } catch(_){} analyser = null; }
+  if (audioCtx) { audioCtx.close().catch(()=>{}); audioCtx = null; }
+  if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
   document.getElementById('micBtn').classList.remove('on');
   document.getElementById('meterBar').classList.remove('show');
   document.getElementById('meterFill').style.width = '0%';
