@@ -444,12 +444,26 @@ function toggleMic() {
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
         setLabel('마이크 권한 필요');
         stopMic();
+      } else if (e.error === 'network') {
+        setLabel('네트워크 오류 — 재시도 중...');
+      } else if (e.error === 'audio-capture') {
+        setLabel('마이크를 찾을 수 없어요');
+        stopMic();
       }
+      // no-speech / aborted are harmless; onend will restart
     };
 
-    // Safari stops recognition after each utterance — restart with small delay
+    // Restart after each utterance (Safari / Android stop after silence)
+    let restartCount = 0;
     recognition.onend = () => {
-      if (micActive) setTimeout(() => { try { recognition.start(); } catch(_) {} }, 150);
+      if (!micActive) return;
+      restartCount++;
+      // Back-off to avoid tight loop: 150ms → 300ms → 600ms → cap 1s
+      const delay = Math.min(150 * Math.pow(2, restartCount - 1), 1000);
+      setTimeout(() => {
+        if (!micActive) return;
+        try { recognition.start(); restartCount = 0; } catch(_) {}
+      }, delay);
     };
 
     recognition.start();
