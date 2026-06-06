@@ -390,10 +390,10 @@ function updateLabel() {
 // "후" concentrates energy at ~300-700 Hz (the "oo" vowel has very low formants).
 // Regular speech spreads energy much higher — centroid typically 800-2000+ Hz.
 // Requiring 300 ms of continuous low-centroid sound filters out short speech bursts.
-const BLOW_THRESHOLD   = 22;   // minimum overall amplitude (loud enough to be deliberate)
-const HOO_CENTROID_MAX = 700;  // Hz — spectral centroid must stay below this
-const HOO_DURATION_MS  = 300;  // ms — must sustain to rule out brief speech sounds
-const BLOW_COOLDOWN_MS = 1000;
+const BLOW_THRESHOLD   = 18;   // minimum overall amplitude
+const HOO_CENTROID_MAX = 1200; // Hz — raised: baby "후" centroid can be up to ~1 kHz
+const HOO_DURATION_MS  = 200;  // ms — sustain long enough to rule out brief sounds
+const BLOW_COOLDOWN_MS = 800;
 let audioCtx = null, analyser = null, micStream = null;
 let micActive = false, rafId = null, hooStartTime = 0, lastBlow = 0;
 let binHz = 43; // Hz per FFT bin, recalculated on mic init
