@@ -389,27 +389,41 @@ function updateLabel() {
 // "후" detection using Web Speech Recognition (ko-KR)
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition = null;
-let micActive = false, lastBlow = 0;
+let micActive = false, lastBlow = 0, labelTimer = null;
 const BLOW_COOLDOWN_MS = 800;
+
+// syllables that sound like "후" — broadened to catch baby pronunciation variations
+const HOO_PATTERNS = ['후', '훅', '훠', '허', '호', '풍', '부', '푸'];
+function isHoo(text) { return HOO_PATTERNS.some(p => text.includes(p)); }
+
+function setLabel(txt, resetMs) {
+  document.getElementById('micLabel').textContent = txt;
+  clearTimeout(labelTimer);
+  if (resetMs) labelTimer = setTimeout(() => {
+    if (micActive) document.getElementById('micLabel').textContent = '"후" 라고 말해보세요!';
+  }, resetMs);
+}
 
 function toggleMic() {
   if (!micActive) {
     if (!SpeechRecognition) {
-      document.getElementById('micLabel').textContent = '지원 안 됨 (Chrome/Safari 필요)';
+      setLabel('Chrome 또는 Safari에서 열어주세요');
       return;
     }
     recognition = new SpeechRecognition();
     recognition.lang = 'ko-KR';
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.maxAlternatives = 3;
+    recognition.maxAlternatives = 5;
 
     recognition.onresult = (e) => {
       for (let i = e.resultIndex; i < e.results.length; i++) {
         for (let j = 0; j < e.results[i].length; j++) {
-          const text = e.results[i][j].transcript;
+          const text = e.results[i][j].transcript.trim();
+          // Show what was heard so we can debug
+          setLabel(`들림: "${text}"`, 2000);
           const now = Date.now();
-          if (text.includes('후') && now - lastBlow > BLOW_COOLDOWN_MS) {
+          if (isHoo(text) && now - lastBlow > BLOW_COOLDOWN_MS) {
             lastBlow = now;
             extinguishOne();
             flashMeter();
@@ -419,20 +433,22 @@ function toggleMic() {
     };
 
     recognition.onerror = (e) => {
-      if (e.error === 'not-allowed') {
-        document.getElementById('micLabel').textContent = '마이크 권한 필요';
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        setLabel('마이크 권한 필요');
         stopMic();
       }
     };
 
-    // Auto-restart: Speech Recognition stops after silence
-    recognition.onend = () => { if (micActive) recognition.start(); };
+    // Safari stops recognition after each utterance — restart with small delay
+    recognition.onend = () => {
+      if (micActive) setTimeout(() => { try { recognition.start(); } catch(_) {} }, 150);
+    };
 
     recognition.start();
     micActive = true;
     document.getElementById('micBtn').classList.add('on');
     document.getElementById('meterBar').classList.add('show');
-    document.getElementById('micLabel').textContent = '"후" 라고 말해보세요!';
+    setLabel('"후" 라고 말해보세요!');
   } else {
     stopMic();
   }
