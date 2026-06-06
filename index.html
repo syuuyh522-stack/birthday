@@ -412,9 +412,11 @@ function updateLabel() {
 }
 
 let listening=false,audioCtx=null,analyser=null,rafId=null,blowFrames=0;
-const BLOW_THRESHOLD=55,BLOW_FRAMES_NEEDED=4;
-let lastBlowTime=0;
-const BLOW_COOLDOWN_MS=350;
+/* 아기용: 숨소리 수준에도 반응하도록 임계값을 크게 낮춤 */
+const BLOW_THRESHOLD = 18;
+const BLOW_FRAMES_NEEDED = 2;
+let lastBlowTime = 0;
+const BLOW_COOLDOWN_MS = 500;
 
 async function toggleMic() {
   if (listening){stopMic();return;}
@@ -425,7 +427,7 @@ async function toggleMic() {
     audioCtx=new(window.AudioContext||window.webkitAudioContext)();
     analyser=audioCtx.createAnalyser();
     analyser.fftSize=512;
-    analyser.smoothingTimeConstant=0.4;
+    analyser.smoothingTimeConstant=0.3;
     audioCtx.createMediaStreamSource(stream).connect(analyser);
     listening=true;
     document.getElementById('micBtn').classList.add('on');
@@ -451,14 +453,21 @@ function detectLoop(data) {
   let sum=0;
   for(let i=0;i<data.length;i++)sum+=data[i];
   const avg=sum/data.length;
-  document.getElementById('meterFill').style.width=Math.min(100,avg/255*100*3.5)+'%';
+  /* 미터 바는 더 민감하게 표시 */
+  document.getElementById('meterFill').style.width=Math.min(100,avg/255*100*8)+'%';
   if(avg>BLOW_THRESHOLD){
     blowFrames++;
     if(blowFrames>=BLOW_FRAMES_NEEDED){
       const now=Date.now();
-      if(now-lastBlowTime>BLOW_COOLDOWN_MS){lastBlowTime=now;blowOneCandle();}
+      if(now-lastBlowTime>BLOW_COOLDOWN_MS){
+        lastBlowTime=now;
+        blowFrames=0;
+        blowOneCandle();
+      }
     }
-  } else {blowFrames=Math.max(0,blowFrames-1);}
+  } else {
+    blowFrames=Math.max(0,blowFrames-1);
+  }
   rafId=requestAnimationFrame(()=>detectLoop(data));
 }
 
